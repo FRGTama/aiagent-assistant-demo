@@ -1,4 +1,7 @@
 .env
-user_info.txt
 vector-db
 .venv
+.venv1
+venv1
+chroma_db
+docs

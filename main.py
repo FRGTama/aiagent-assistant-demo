@@ -1,35 +1,44 @@
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, BaseMessage
+from langchain_core.output_parsers import JsonOutputParser
 from langchain_ollama.llms import OllamaLLM
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from dotenv import load_dotenv
+
+from memory import Memory
+
+from mem_sentinel import reflection_template, episodic_recall, add_episodic_mem, episodic_sys_prompt
 from utils import format_convo
 import os
+
 load_dotenv()
 
-model = OllamaLLM(model="llama3.2",base_url=os.getenv("LLM_ENDPOINT"))
+default_prompt = SystemMessage("""
+You are a personal AI that will help the user in succeeding their academic career, by evolving over interactions,
+try your best to help them understand the problem given, 
+respond in short converse forms like you are talking and only give detailed explanation when asked to do so,
+if you don't know a question, say you don't know paired with a question that helps you understand better, this is the questions:
+""")
 
-template = ChatPromptTemplate([SystemMessage("""
-You are a personal assistance, specializing in answering questions, 
-and you can get better overtime by asking questions on topics you don't know, an evolving AI assistant,
-if you don't know the answer to the user's question, 
-clarify your incompetence and ask the user to give you more information so in the future if the user ask again you can answer it 
-"""),
-                               MessagesPlaceholder(variable_name="conversation", optional=True)])
+llmmodel = OllamaLLM(model="mannix/jan-nano",base_url=os.getenv("LOCAL_ENDPOINT"))
 
-
+mem = Memory()
 def conversation_loop():
-    convo = []
+    convo = [BaseMessage(''), default_prompt]
     while True:
         question = HumanMessage(content=input("\nq to quit: "))
         if question.content.lower() == "q":
             break
+        if question.content.lower() == "q_quiet":
+            break
         convo.append(question)
-        prompt = template.invoke({"conversation": convo})
-        result = AIMessage(model.invoke(prompt))
+        result = AIMessage(llmmodel.invoke(convo))
         print(result.content)
         convo.append(result)
     return convo
+res = conversation_loop()
+add_episodic_mem(mem,res)
+# print('\n\n\n\n')
+print(format_convo(res))
 
-
-print(format_convo(conversation_loop()))
+# add_episodic_mem(mem,res)
+# print(episodic_recall(mem0,"what do you know about me?")["documents"])
 
