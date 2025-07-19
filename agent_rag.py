@@ -2,7 +2,7 @@ from langchain_core.messages import HumanMessage
 from langchain.agents import initialize_agent, AgentType
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_community.tools import TavilySearchResults
-
+from memory import *
 from dotenv import load_dotenv
 from langchain_ollama import OllamaLLM
 
