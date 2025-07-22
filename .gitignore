@@ -5,3 +5,4 @@ vector-db
 venv1
 chroma_db
 docs
+__pycache__
