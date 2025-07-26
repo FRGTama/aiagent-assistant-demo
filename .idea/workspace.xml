@@ -5,22 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="2d9ec25f-b849-48ef-974c-b14598d65ace" name="Changes" comment="Running memory">
-      <change afterPath="$PROJECT_DIR$/.idea/aiagent.iml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_19_7_25,_15_17_[Changes]/shelved.patch" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/shelf/Uncommitted_changes_before_Update_at_19_7_25__15_17__Changes_.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/loader.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ocr_bot.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/output.txt" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/output/ocr/page-0.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/output/ocr/page-1.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tessdata/chi_sim_vert.traineddata" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/translate_bot.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/agent_rag.py" beforeDir="false" afterPath="$PROJECT_DIR$/agent_rag.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -102,7 +87,7 @@
       <workItem from="1752194678670" duration="9986000" />
       <workItem from="1752907461608" duration="8744000" />
       <workItem from="1753107422954" duration="14406000" />
-      <workItem from="1753404319200" duration="19993000" />
+      <workItem from="1753404319200" duration="20113000" />
     </task>
     <task id="LOCAL-00001" summary="Running memory">
       <option name="closed" value="true" />

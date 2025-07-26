@@ -6,3 +6,7 @@ venv1
 chroma_db
 docs
 __pycache__
+.idea
+.DS_Store
+output.txt
+output
