@@ -1,0 +1,493 @@
+Index: .gitignore
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>.env\nuser_info.txt\nvector-db\n.venv
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/.gitignore b/.gitignore
+--- a/.gitignore	(revision 1fcac0906975ca904c2a72dd95f1ad67d4ef0fa4)
++++ b/.gitignore	(date 1752912866819)
+@@ -1,4 +1,7 @@
+ .env
+-user_info.txt
+ vector-db
+-.venv
+\ No newline at end of file
++.venv
++.venv1
++venv1
++chroma_db
++docs
+\ No newline at end of file
+Index: agent_rag.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>from langchain_core.messages import HumanMessage\nfrom langchain.agents import initialize_agent, AgentType\nfrom langchain_google_genai import ChatGoogleGenerativeAI\nfrom langchain_community.tools import TavilySearchResults\nfrom memory import *\nfrom dotenv import load_dotenv\nfrom langchain_ollama import OllamaLLM\n\nload_dotenv()\nimport os\n\nsearch_tool = TavilySearchResults(search_depth=\"basic\")\n\nagent_tools = [search_tool]\n\n# llm = ChatGoogleGenerativeAI(model=\"gemini-2.5-pro\")\nllm = OllamaLLM(model=\"mannix/jan-nano\",base_url=os.getenv(\"LOCAL_ENDPOINT\"))\n\nagent = initialize_agent(\n    tools=agent_tools,\n    llm=llm,\n    agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,\n    verbose=True\n)\n\n# Run the agent\nagent.invoke([HumanMessage(\"Should i bring an umbrella today, i live in Thủ Đức\")])
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/agent_rag.py b/agent_rag.py
+--- a/agent_rag.py	(revision 1fcac0906975ca904c2a72dd95f1ad67d4ef0fa4)
++++ b/agent_rag.py	(date 1752912823268)
+@@ -1,21 +1,38 @@
+-from langchain_core.messages import HumanMessage
++from langchain_chroma import Chroma
+ from langchain.agents import initialize_agent, AgentType
+-from langchain_google_genai import ChatGoogleGenerativeAI
+-from langchain_community.tools import TavilySearchResults
+-from memory import *
++from langchain.tools import tool
++from langchain_core.messages import HumanMessage
++import memory
+ from dotenv import load_dotenv
+-from langchain_ollama import OllamaLLM
+-
+-load_dotenv()
+ import os
+-
+-search_tool = TavilySearchResults(search_depth="basic")
++from langchain_ollama import OllamaLLM, OllamaEmbeddings
++from langchain_community.document_loaders import PyPDFLoader
+ 
+-agent_tools = [search_tool]
+-
+-# llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro")
++load_dotenv()
+ llm = OllamaLLM(model="mannix/jan-nano",base_url=os.getenv("LOCAL_ENDPOINT"))
++collection_name = "rag"
++mem = memory.Memory()
++
++file_path = "./docs/test.pdf"
++
++vector_store = Chroma(
++    collection_name=collection_name,
++    embedding_function=OllamaEmbeddings(model=os.getenv("EMBEDDING_MODEL"), base_url=os.getenv("SERVER_ENDPOINT")),
++    persist_directory="./chroma_db",
++)
++
++retriever = vector_store.as_retriever()
++@tool
++def query_vector_db(query):
++    """Searches the vector database for relevant memory based on the input query string."""
++    q_result = retriever.invoke(input=query)
++    return q_result
+ 
++def store_vector_db(data):
++    """stores the data into the vector database"""
++    retriever.add_documents(documents=data)
++
++agent_tools = [query_vector_db]
+ agent = initialize_agent(
+     tools=agent_tools,
+     llm=llm,
+@@ -23,5 +40,10 @@
+     verbose=True
+ )
+ 
+-# Run the agent
+-agent.invoke([HumanMessage("Should i bring an umbrella today, i live in Thủ Đức")])
+\ No newline at end of file
++loader = PyPDFLoader(file_path)
++pages = []
++for page in loader.lazy_load():
++    pages.append(page)
++store_vector_db(pages)
++question = [HumanMessage("What's my name")]
++result = agent.invoke(question)
+Index: main.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>from langchain_core.messages import HumanMessage, SystemMessage, AIMessage\nfrom langchain_ollama.llms import OllamaLLM\nfrom langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder\nfrom dotenv import load_dotenv\nfrom utils import format_convo\nimport os\nload_dotenv()\n\nmodel = OllamaLLM(model=\"llama3.2\",base_url=os.getenv(\"LLM_ENDPOINT\"))\n\ntemplate = ChatPromptTemplate([SystemMessage(\"\"\"\nYou are a personal assistance, specializing in answering questions, \nand you can get better overtime by asking questions on topics you don't know, an evolving AI assistant,\nif you don't know the answer to the user's question, \nclarify your incompetence and ask the user to give you more information so in the future if the user ask again you can answer it \n\"\"\"),\n                               MessagesPlaceholder(variable_name=\"conversation\", optional=True)])\n\n\ndef conversation_loop():\n    convo = []\n    while True:\n        question = HumanMessage(content=input(\"\\nq to quit: \"))\n        if question.content.lower() == \"q\":\n            break\n        convo.append(question)\n        prompt = template.invoke({\"conversation\": convo})\n        result = AIMessage(model.invoke(prompt))\n        print(result.content)\n        convo.append(result)\n    return convo\n\n\nprint(format_convo(conversation_loop()))\n\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/main.py b/main.py
+--- a/main.py	(revision 1fcac0906975ca904c2a72dd95f1ad67d4ef0fa4)
++++ b/main.py	(date 1752195318084)
+@@ -1,35 +1,44 @@
+-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
++from langchain_core.messages import HumanMessage, SystemMessage, AIMessage, BaseMessage
++from langchain_core.output_parsers import JsonOutputParser
+ from langchain_ollama.llms import OllamaLLM
+-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+ from dotenv import load_dotenv
++
++from memory import Memory
++
++from mem_sentinel import reflection_template, episodic_recall, add_episodic_mem, episodic_sys_prompt
+ from utils import format_convo
+ import os
++
+ load_dotenv()
+ 
+-model = OllamaLLM(model="llama3.2",base_url=os.getenv("LLM_ENDPOINT"))
++default_prompt = SystemMessage("""
++You are a personal AI that will help the user in succeeding their academic career, by evolving over interactions,
++try your best to help them understand the problem given, 
++respond in short converse forms like you are talking and only give detailed explanation when asked to do so,
++if you don't know a question, say you don't know paired with a question that helps you understand better, this is the questions:
++""")
+ 
+-template = ChatPromptTemplate([SystemMessage("""
+-You are a personal assistance, specializing in answering questions, 
+-and you can get better overtime by asking questions on topics you don't know, an evolving AI assistant,
+-if you don't know the answer to the user's question, 
+-clarify your incompetence and ask the user to give you more information so in the future if the user ask again you can answer it 
+-"""),
+-                               MessagesPlaceholder(variable_name="conversation", optional=True)])
++llmmodel = OllamaLLM(model="mannix/jan-nano",base_url=os.getenv("LOCAL_ENDPOINT"))
+ 
+-
++mem = Memory()
+ def conversation_loop():
+-    convo = []
++    convo = [BaseMessage(''), default_prompt]
+     while True:
+         question = HumanMessage(content=input("\nq to quit: "))
+         if question.content.lower() == "q":
+             break
++        if question.content.lower() == "q_quiet":
++            break
+         convo.append(question)
+-        prompt = template.invoke({"conversation": convo})
+-        result = AIMessage(model.invoke(prompt))
++        result = AIMessage(llmmodel.invoke(convo))
+         print(result.content)
+         convo.append(result)
+     return convo
++res = conversation_loop()
++add_episodic_mem(mem,res)
++# print('\n\n\n\n')
++print(format_convo(res))
+ 
+-
+-print(format_convo(conversation_loop()))
++# add_episodic_mem(mem,res)
++# print(episodic_recall(mem0,"what do you know about me?")["documents"])
+ 
+Index: memory.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import chromadb\nimport chromadb.utils.embedding_functions as embedding_functions\nfrom dotenv import load_dotenv\nimport os\n\nload_dotenv()\n\nclass Memory:\n    def __init__(self: str, embed_url = os.getenv(\"EMBEDDING_ENDPOINT\"), embed_model = os.getenv(\"EMBEDDING_MODEL\")):\n        self.client = chromadb.HttpClient(host=os.getenv(\"HOST\"),port=int(os.getenv(\"CHROMA_PORT\")))\n        self.ef = embedding_functions.OllamaEmbeddingFunction(\n            url= embed_url,\n            model_name = embed_model\n        )\n\n    def __str__(self):\n        print(\"hello\")\n\n    def vectorize(self,data):\n        return self.ef(data)\n\n    def get_instance(self):\n        return self.client\n\n    def get_col(self,col_name: str):\n        return self.get_instance().get_collection(\n            name=col_name\n        )\n\n    def add_mem(self, col_name: str, mem: list[str]):\n        col = self.get_col(col_name)\n        def make_id_list():\n            return [f'id{x}' for x in [x for x in range(col.count(),col.count() + len(mem))]]\n        ids=make_id_list()\n        print(ids)\n        col.add(\n            documents=mem,\n            ids=ids,\n            embeddings=self.vectorize(mem)\n        )\n\n    def get_mem(self, col_name: str):\n        col = self.get_col(col_name)\n        def get_id_list_all():\n            return [f'id{x}' for x in range(0,col.count())]\n        ids=get_id_list_all()\n        return col.get(\n            ids=ids\n        )\n\n    def update_mem(self,col_name: str, new_mem: list[str]):\n        col = self.get_col(col_name)\n\n\n\n\nmem0 = Memory()\nprint(mem0.get_mem(\"dev_test\"))\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/memory.py b/memory.py
+--- a/memory.py	(revision 1fcac0906975ca904c2a72dd95f1ad67d4ef0fa4)
++++ b/memory.py	(date 1752908933146)
+@@ -6,53 +6,79 @@
+ load_dotenv()
+ 
+ class Memory:
+-    def __init__(self: str, embed_url = os.getenv("EMBEDDING_ENDPOINT"), embed_model = os.getenv("EMBEDDING_MODEL")):
++    def __init__(self: str, embed_url = os.getenv("SERVER_ENDPOINT"), embed_model = os.getenv("EMBEDDING_MODEL")):
+         self.client = chromadb.HttpClient(host=os.getenv("HOST"),port=int(os.getenv("CHROMA_PORT")))
+         self.ef = embedding_functions.OllamaEmbeddingFunction(
+             url= embed_url,
+             model_name = embed_model
+         )
++        self.what_worked = set()
++        self.what_to_avoid = set()
+ 
+     def __str__(self):
+         print("hello")
+ 
++    def update_ww(self, data: str):
++        self.what_worked.update(data)
++    def update_wta(self,data: str):
++        self.what_to_avoid.update(data)
++
+     def vectorize(self,data):
+         return self.ef(data)
+ 
+     def get_instance(self):
+         return self.client
+ 
++    def clear_col(self,col):
++        self.client.delete_collection(col)
++        pass
++
+     def get_col(self,col_name: str):
+-        return self.get_instance().get_collection(
+-            name=col_name
++        return self.get_instance().get_or_create_collection(
++            name=col_name,
++            embedding_function=self.ef
+         )
+ 
+-    def add_mem(self, col_name: str, mem: list[str]):
++    def add_mem(self, col_name: str, mem: list[str], reflection):
+         col = self.get_col(col_name)
+-        def make_id_list():
+-            return [f'id{x}' for x in [x for x in range(col.count(),col.count() + len(mem))]]
+-        ids=make_id_list()
+-        print(ids)
++        ids=f'id{str(col.count())}'
+         col.add(
+             documents=mem,
+             ids=ids,
+-            embeddings=self.vectorize(mem)
++            embeddings=self.vectorize(mem),
++            metadatas=[
++                {
++                    "context_tags": reflection['context_tags'],
++                    "conversation_summary": reflection['conversation_summary'],
++                    "what_worked": reflection['what_worked'],
++                    "what_to_avoid": reflection['what_to_avoid']
++                }
++            ]
+         )
+-
+-    def get_mem(self, col_name: str):
++    def query_mem(self,col_name: str, query: str,where=None):
+         col = self.get_col(col_name)
+-        def get_id_list_all():
+-            return [f'id{x}' for x in range(0,col.count())]
+-        ids=get_id_list_all()
+-        return col.get(
+-            ids=ids
++        result = col.query(
++            query_texts=query,
++            n_results=1
+         )
++        if where:
++            result = col.query(
++                query_texts=query,
++                n_results=1,
++                where=where
++            )
++        return result
++
++    # def get_mem(self, col_name: str):
++    #     col = self.get_col(col_name)
++    #     def get_id_list_all():
++    #         return [f'id{x}' for x in range(0,col.count())]
++    #     ids=get_id_list_all()
++    #     return col.get(
++    #         ids=ids
++    #     )
+ 
+     def update_mem(self,col_name: str, new_mem: list[str]):
+         col = self.get_col(col_name)
+-
+-
+-
+-
+-mem0 = Memory()
+-print(mem0.get_mem("dev_test"))
++        old_mem = self.query_mem(col_name,new_mem[0])
++        col.update(new_mem)
+\ No newline at end of file
+Index: mem_sentinel.py
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/mem_sentinel.py b/mem_sentinel.py
+--- a/mem_sentinel.py	(revision 1fcac0906975ca904c2a72dd95f1ad67d4ef0fa4)
++++ b/mem_sentinel.py	(date 1752193838446)
+@@ -1,0 +1,113 @@
++import os
++
++from langchain_core.messages import SystemMessage
++from langchain_core.output_parsers import JsonOutputParser
++from langchain_core.prompts import ChatPromptTemplate
++from langchain_ollama import OllamaLLM
++
++from memory import Memory
++from utils import format_convo
++
++reflection_template = ChatPromptTemplate(["""
++    You are analyzing interactions between the user and the AI assistant to create memories that will help guide future interactions. 
++    Your task is to extract key elements that would be most helpful when encountering similar requests in the future.
++
++Review the conversation and create a memory reflection following these rules:
++
++1. For any field where you don't have enough information or the field isn't relevant, use "N/A"
++2. Be extremely concise - each string should be one clear, actionable sentence
++3. Focus only on information that would be useful for handling similar future conversations
++4. Context_tags should be specific enough to match similar situations but general enough to be reusable
++5. Never use unquoted values like N/A
++
++Output valid JSON in exactly this format:
++{{
++    "context_tags": string,                //1 keyword that would help identify similar future conversations. Use field-specific terms like "fitness_plan", "chemistry_exam_prep", "crud_app_project", "emotional_stress", "current_struggles"
++    "conversation_summary": string, // One sentence describing what the conversation accomplished
++    "what_worked": string,         // Most effective approach or strategy used in this conversation
++    "what_to_avoid": string        // Most important pitfall or ineffective approach to avoid
++}}
++
++Examples:
++- Good context_tags: "marathon_sub3_plan", "chemistry_midterm_review", "yearly_goal"
++- Bad context_tags: "self_improvement", "academic_overview", "future_expectations"
++
++- Good conversation_summary: "Created a training plan for the user to increase running pace for upcoming marathon"
++- Bad conversation_summary: "Discussed a machine learning paper"
++
++- Good what_worked: "Using analogies from matrix multiplication to explain attention score calculations"
++- Bad what_worked: "Explained the technical concepts well"
++
++- Good what_to_avoid: "Diving into mathematical formulas before establishing user's familiarity with linear algebra fundamentals"
++- Bad what_to_avoid: "Used complicated language"
++
++Additional examples for different research scenarios:
++
++Context tags examples:
++- "experimental_design", "control_groups", "methodology_critique"
++- "statistical_significance", "p_value_interpretation", "sample_size"
++- "research_limitations", "future_work", "methodology_gaps"
++
++Conversation summary examples:
++- "Clarified why the paper's cross-validation approach was more robust than traditional hold-out methods"
++- "Helped identify potential confounding variables in the study's experimental design"
++
++What worked examples:
++- "Breaking down complex statistical concepts using visual analogies and real-world examples"
++- "Connecting the paper's methodology to similar approaches in related seminal papers"
++
++What to avoid examples:
++- "Assuming familiarity with domain-specific jargon without first checking understanding"
++- "Over-focusing on mathematical proofs when the user needed intuitive understanding"
++
++Do not include any text outside the JSON object in your response.
++
++Here is the prior conversation:
++
++{conversation}
++"""
++                                         ])
++
++
++def add_episodic_mem(memobj: Memory, conver):
++    conversation = format_convo(conver)
++
++    reflect_model = OllamaLLM(model="llama3.2", base_url=os.getenv("LOCAL_ENDPOINT"),temperature=0.5)
++    reflect = reflection_template | reflect_model | JsonOutputParser()
++
++    reflection = reflect.invoke(conversation)
++
++    memobj.add_mem("episodic_mem",conversation,reflection)
++
++def episodic_recall(memobj: Memory, query: str):
++    return memobj.query_mem("episodic_mem",query)
++
++def episodic_sys_prompt(memobj: Memory, query , convo):
++    mem = episodic_recall(memobj, query)
++    curr_convo = format_convo(convo[-4:])
++
++    ww = mem['metadatas'][0][0]['what_worked']
++    wta = mem['metadatas'][0][0]["what_to_avoid"]
++    summary = mem['metadatas'][0][0]['conversation_summary']
++    memobj.update_ww(ww.split('. '))
++    memobj.update_wta(wta.split('. '))
++
++    prev_convo = format_convo(convo[-4:-1]) if len(convo) >= 4 else format_convo(convo[:-1])
++    epi_prompt = f"""
++    You are a personal assistance, specializing in answering questions, 
++    keep the answers short but precise,
++    you can get better overtime by asking questions on topics you don't know, an evolving AI assistant,
++    if you don't know the answer to the user's question, 
++    clarify your incompetence and ask the user to give you more information so in the future if the user ask again you can answer it 
++    You recall similar conversations with the user, here are the details:
++    
++    Past relevant memory:
++    Summary: {summary}
++    Previous conversations: {prev_convo}
++    What has worked well: {memobj.what_worked}
++    What to avoid: {memobj.what_to_avoid}
++    
++    Current conversation: {curr_convo}
++    Use these memories as context for your response to the user
++    """
++    return SystemMessage(content=epi_prompt)
+\ No newline at end of file
+Index: requirements.txt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>fastapi\nuvicorn\nrequests\nollama\npython-dotenv\nlangchain\nlangchain-core\nlangchain-ollama\nlangchain-chroma\nchromadb
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/requirements.txt b/requirements.txt
+--- a/requirements.txt	(revision 1fcac0906975ca904c2a72dd95f1ad67d4ef0fa4)
++++ b/requirements.txt	(date 1752304818839)
+@@ -1,10 +1,71 @@
+ fastapi
+ uvicorn
+-requests
++requests~=2.32.4
+ ollama
+-python-dotenv
+-langchain
+-langchain-core
++python-dotenv~=1.1.1
++langchain~=0.3.26
++langchain-core~=0.3.68
+ langchain-ollama
+ langchain-chroma
+-chromadb
+\ No newline at end of file
++chromadb~=1.0.15
++h11~=0.16.0
++pip~=25.0.1
++build~=1.2.2.post1
++wheel~=0.45.1
++protobuf~=5.29.5
++typing_extensions~=4.14.1
++sniffio~=1.3.1
++click~=8.2.1
++httpcore~=1.0.9
++Pygments~=2.19.2
++rich~=14.0.0
++idna~=3.10
++certifi~=2025.7.9
++httpx~=0.28.1
++langmem~=0.0.28
++pydantic~=2.11.7
++langgraph~=0.5.2
++anyio~=4.9.0
++pydantic_core~=2.33.2
++annotated-types~=0.7.0
++setuptools~=78.1.0
++PyYAML~=6.0.2
++multidict~=6.6.3
++propcache~=0.3.2
++typing_extensions~=4.14.1
++attrs~=25.3.0
++numpy~=2.3.1
++charset-normalizer~=3.4.2
++overrides~=7.7.0
++orjson~=3.10.18
++xxhash~=3.5.0
++yarl~=1.20.1
++aiohttp~=3.12.14
++aiosignal~=1.4.0
++frozenlist~=1.7.0
++aiohappyeyeballs~=2.6.1
++uvloop~=0.21.0
++urllib3~=2.5.0
++pydantic_core~=2.33.2
++tenacity~=9.1.2
++langchain-community~=0.3.27
++langsmith~=0.4.5
++openai~=1.95.0
++langchain-text-splitters~=0.3.8
++SQLAlchemy~=2.0.41
++ormsgpack~=1.10.0
++anthropic~=0.57.1
++zstandard~=0.23.0
++requests-toolbelt~=1.0.0
++packaging~=24.2
++importlib_metadata~=8.7.0
++marshmallow~=3.26.1
++jsonpointer~=3.0.0
++jsonpatch~=1.33
++typing-inspect~=0.9.0
++dataclasses-json~=0.6.7
++pydantic-settings~=2.10.1
++mypy_extensions~=1.1.0
++httpx-sse~=0.4.1
++tiktoken~=0.9.0
++langchain-google-genai~=2.1.7
+\ No newline at end of file
