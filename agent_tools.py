@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import os
 import models
 from ocr_bot import extract_text_from_pdf
+load_dotenv()
 
 collection_name = "rag"
 vector_store = Chroma(
@@ -47,7 +48,7 @@ def write_to_file(content:str):
 def translate(content):
     """takes in content argument as text and translate content to vietnamese and return text data"""
     prompt = [HumanMessage(f"translate the given text to vietnamese, this is the content: {content}")]
-    models.global_models.ocr_llm.invoke(prompt)
+    models.global_models.get_trans_llm().invoke(prompt)
 
 @tool
 def search_the_web(query):

@@ -17,7 +17,7 @@ def ocr(image_file_path):
             {"type": "image_url", "image_url": f"data:image/png;base64,{encoded_image}"},
         ]
     )
-    result_local = global_models.ocr_llm.invoke([message_local])
+    result_local = global_models.get_ocr_llm().invoke([message_local])
     return result_local.content
 
 ## extract images from pdf to .output/ocr/. and returns number of page
