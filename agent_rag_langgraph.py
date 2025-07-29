@@ -1,49 +1,54 @@
 from typing import Annotated
-import os
 
-from dotenv import load_dotenv
-from langchain.chat_models import init_chat_model
+from langchain_core.messages import HumanMessage
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langgraph.checkpoint.memory import InMemorySaver
 from typing_extensions import TypedDict
-
 from langgraph.graph import StateGraph, START, END
 from langgraph.graph.message import add_messages
-
+from dotenv import load_dotenv
 load_dotenv()
-os.environ["GOOGLE_API_KEY"] = os.getenv("GOOGLE_API_KEY")
 
 class State(TypedDict):
     messages: Annotated[list, add_messages]
 
-llm = init_chat_model("google_genai:gemini-2.0-flash")
-
-graph_builder = StateGraph(State)
+# Initialize model separately
+def create_llm():
+    return ChatGoogleGenerativeAI(
+        model="gemini-2.5-pro",
+        temperature=0
+    )
+config = {"configurable": {"thread_id": "1"}}
 
 def chatbot(state: State):
+    llm = create_llm()  # Create model instance inside function
     return {"messages": [llm.invoke(state["messages"])]}
 
-# The first argument is the unique node name
-# The second argument is the function or object that will be called whenever
-# the node is used.
+
+graph_builder = StateGraph(State)
 graph_builder.add_node("chatbot", chatbot)
 graph_builder.add_edge(START, "chatbot")
 graph_builder.add_edge("chatbot", END)
-graph = graph_builder.compile()
+memory = InMemorySaver()
+graph = graph_builder.compile(checkpointer=memory)
+# graph = graph_builder.compile()
 
-def stream_graph_updates(user_input: str):
-    for event in graph.stream({"messages": [{"role": "user", "content": user_input}]}):
-        for value in event.values():
-            print("Assistant:", value["messages"][-1].content)
+def gradio_chatbot(message, history):
+    # Convert to LangGraph format
+    messages = []
+    for human, ai in history:
+        messages.append(HumanMessage(content=human))
+        if ai:
+            messages.append(response)  # Add AI message
 
-while True:
-    try:
-        user_input = input("User: ")
-        if user_input.lower() in ["quit", "exit", "q"]:
-            print("Goodbye!")
-            break
-        stream_graph_updates(user_input)
-    except:
-        # fallback if input() is not available
-        user_input = "What do you know about LangGraph?"
-        print("User: " + user_input)
-        stream_graph_updates(user_input)
-        break
+    messages.append(HumanMessage(content=message))
+
+    # Get response from your LangGraph
+    result = graph.invoke({"messages": messages})
+
+    # Extract just the text content for Gradio
+    ai_response = result["messages"][-1].content
+
+    return ai_response  # Return just the text, not the whole message object
+
+
