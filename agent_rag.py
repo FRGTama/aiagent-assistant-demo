@@ -22,7 +22,7 @@ system_prompt = """You are a smart assistant that can use tools when necessary, 
     """
 agent = initialize_agent(
     tools=agent_tools.tool_list,
-    llm=models.global_models.get_ocr_llm(),
+    llm=models.global_models.get_ollama_llm(),
     agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
     agent_kwargs={"system_message": system_prompt},
     handle_parsing_errors=True,

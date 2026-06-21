@@ -6,8 +6,8 @@ import os
 load_dotenv()
 
 class Memory:
-    def __init__(self: str, embed_url = os.getenv("SERVER_ENDPOINT"), embed_model = os.getenv("EMBEDDING_MODEL")):
-        self.client = chromadb.HttpClient(host=os.getenv("HOST"),port=int(os.getenv("CHROMA_PORT")))
+    def __init__(self: str, embed_url = os.getenv("SERVER_ENDPOINT"), embed_model = os.getenv("EMBEDDING_MODEL"),chroma_host = os.getenv("HOST")):
+        self.client = chromadb.HttpClient(host=chroma_host,port=int(os.getenv("CHROMA_PORT")))
         self.ef = embedding_functions.OllamaEmbeddingFunction(
             url= embed_url,
             model_name = embed_model

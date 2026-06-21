@@ -15,9 +15,13 @@ load_dotenv()
 def prompt_agent(prompt, history, file, image):
     img_path = image if image else "None"
     file_path = file if file else "None"
-    sys_prompt = f"""You are an assistant specialize in answering questions, given are the image file path named img_path
-    a pdf file path named file_path and a prompt in string format, answer the prompt based on info gained from 
-    the image or the pdf file.
+    sys_prompt = f"""You are an assistant specialize in answering questions,
+    given are the image file path named img_path
+    a pdf file path named file_path and a prompt in string format, 
+    if any of the argument are listed as None, then skip the processing of such path.
+    answer the prompt based on info gained from 
+    the image or the pdf file if there are paths, else answer based on your own knowledge and tools available,
+    If you lack info on what the user wants or need more info to use a tool, ask the user for such information.
     img_path: {img_path},
     file_path: {file_path},
     chat history: {[msg['content'] for msg in history if msg['role'] == 'user']}
@@ -29,7 +33,7 @@ def prompt_agent(prompt, history, file, image):
 
 chat_ui = gr.ChatInterface(
     fn=prompt_agent,
-    chatbot=gr.Chatbot(height=400, type="messages"),
+    chatbot=gr.Chatbot(type="messages", height=400 ),
     additional_inputs=[
         gr.Image(type="filepath", label="Image"),
         gr.File(type="filepath", label="PDF")
